@@ -41,7 +41,7 @@ export class UserController {
     if (user.userId !== +id) {
       throw new ForbiddenException('You can only update your own account');
     }
-    return this.updateUserUseCase.execute(+id, updateUserDto);
+    return this.updateUserUseCase.execute(+id, updateUserDto, user);
   }
 
   @Delete(':id')

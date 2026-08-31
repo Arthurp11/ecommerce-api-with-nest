@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { UserService } from '../user.service';
 import { UpdateUserDto } from '../dto/update-user.dto';
+import { AuthenticatedUserDto } from 'src/auth/dto/authenticated-user.dto';
 
 const SALT_ROUNDS = 10;
 
@@ -11,7 +12,7 @@ export class UpdateUserUseCase {
 
   constructor(private readonly userService: UserService) {}
 
-  async execute(id: number, updateUserDto: UpdateUserDto) {
+  async execute(id: number, updateUserDto: UpdateUserDto, userFromJwt: AuthenticatedUserDto) {
     this.logger.log(`Updating user with ID ${id}...`);
 
     const data = { ...updateUserDto };
@@ -20,6 +21,10 @@ export class UpdateUserUseCase {
 
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    if(user.id !== userFromJwt.userId) {
+      throw new NotFoundException(`You can only update your own account`);
     }
 
     if (data.password) {
