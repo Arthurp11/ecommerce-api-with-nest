@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, ForbiddenException }
 import { UserService } from './user.service';
 import { CreateUserUseCase } from './usecases/create-user.usecase';
 import { UpdateUserUseCase } from './usecases/update-user.usecase';
+import { DeleteUserUseCase } from './usecases/delete-user.usecase';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
@@ -14,6 +15,7 @@ export class UserController {
     private readonly userService: UserService,
     private readonly createUserUseCase: CreateUserUseCase,
     private readonly updateUserUseCase: UpdateUserUseCase,
+    private readonly deleteUserUseCase: DeleteUserUseCase,
   ) {}
 
   @IsPublic()
@@ -52,6 +54,6 @@ export class UserController {
     if (user.userId !== +id) {
       throw new ForbiddenException('You can only delete your own account');
     }
-    return this.userService.remove(+id);
+    return this.deleteUserUseCase.execute(+id, user);
   }
 }
