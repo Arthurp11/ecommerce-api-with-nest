@@ -26,6 +26,10 @@ export class UserService {
     return this.userRepository.findOne({ id });
   }
 
+  findWithEmail(email: string) {
+    return this.userRepository.findOne({ email });
+  }
+
   findMinimalForJwt(email: string) {
     return this.userRepository.findOne(
       { email },

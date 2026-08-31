@@ -1,7 +1,6 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { JwtService } from "@nestjs/jwt";
-import { Request } from "express";
 import { AuthenticatedUserDto } from "../dto/authenticated-user.dto";
 import { IS_PUBLIC_KEY } from "../decorators/is-public.decorator";
 
@@ -24,7 +23,7 @@ export class AuthTokenGuard implements CanActivate {
             return true;
         }
 
-        const request = context.switchToHttp().getRequest<Request>();
+        const request = context.switchToHttp().getRequest();
         const token = this.extractTokenFromHeader(request.headers['authorization']);
 
         if (!token) {
@@ -33,7 +32,7 @@ export class AuthTokenGuard implements CanActivate {
 
         try {
             const payload: AuthenticatedUserDto = await this.jwtService.verifyAsync(token);
-            (request as any).user = payload;
+            request.user = payload;
         }
         catch (error) {
             throw new UnauthorizedException('Failed to authenticate token');
