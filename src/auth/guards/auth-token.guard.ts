@@ -35,6 +35,10 @@ export class AuthTokenGuard implements CanActivate {
             request.user = payload;
         }
         catch (error) {
+            if (error.name === 'TokenExpiredError') {
+                throw new UnauthorizedException('Token expired');
+            }
+
             throw new UnauthorizedException('Failed to authenticate token');
         }
 

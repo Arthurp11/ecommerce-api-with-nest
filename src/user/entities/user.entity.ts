@@ -13,4 +13,7 @@ export class User {
 
     @Property({hidden: true, lazy: true})
     password!: string;
+
+    @Property({nullable: true})
+    refreshToken?: string;
 }
