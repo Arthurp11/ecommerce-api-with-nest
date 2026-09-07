@@ -37,6 +37,17 @@ export class UserService {
     );
   }
 
+  findForRefreshToken(id: number) {
+    return this.userRepository.findOne(
+      { id },
+      { fields: ['id', 'email', 'refreshToken'] },
+    );
+  }
+
+  updateRefreshToken(id: number, refreshToken: string | null) {
+    return this.userRepository.nativeUpdate({ id }, { refreshToken });
+  }
+
   update(id: number, updateUserDto: UpdateUserDto) {
     return this.userRepository.nativeUpdate({ id }, updateUserDto);  
   }
