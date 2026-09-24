@@ -24,13 +24,14 @@ export class UserController {
     return this.createUserUseCase.execute(createUserDto);
   }
 
-  @Get()
-  findAll() {
-    return this.userService.findAll();
-  }
-
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUserDto,
+  ) {
+    if (user.userId !== +id) {
+      throw new ForbiddenException('You can only view your own account');
+    }
     return this.userService.findOne(+id);
   }
 

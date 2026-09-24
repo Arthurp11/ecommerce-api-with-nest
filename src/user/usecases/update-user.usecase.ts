@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { UserService } from '../user.service';
 import { UpdateUserDto } from '../dto/update-user.dto';
@@ -24,7 +24,7 @@ export class UpdateUserUseCase {
     }
 
     if(user.id !== userFromJwt.userId) {
-      throw new NotFoundException(`You can only update your own account`);
+      throw new ForbiddenException(`You can only update your own account`);
     }
 
     if (data.password) {

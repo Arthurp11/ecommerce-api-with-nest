@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { UserService } from '../user.service';
 import { AuthenticatedUserDto } from 'src/auth/dto/authenticated-user.dto';
 
@@ -18,7 +18,7 @@ export class DeleteUserUseCase {
     }
 
     if (user.id !== userFromJwt.userId) {
-      throw new NotFoundException(`You can only delete your own account`);
+      throw new ForbiddenException(`You can only delete your own account`);
     }
 
     const userRemoved = await this.userService.remove(id);

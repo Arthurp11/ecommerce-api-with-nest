@@ -16,4 +16,10 @@ export class User {
 
     @Property({nullable: true})
     refreshToken?: string;
+
+    @Property({nullable: true})
+    passwordResetTokenHash?: string;
+
+    @Property({nullable: true})
+    passwordResetExpiresAt?: Date;
 }

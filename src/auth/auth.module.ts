@@ -5,12 +5,14 @@ import { AuthService } from "./auth.service";
 import { JwtModule } from "@nestjs/jwt";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { UserModule } from "src/user/user.module";
+import { MailModule } from "src/mail/mail.module";
 import { AuthTokenGuard } from "./guards/auth-token.guard";
 
 @Global()
 @Module({
     imports: [
         UserModule,
+        MailModule,
         ConfigModule,
         JwtModule.registerAsync({
         imports: [ConfigModule],

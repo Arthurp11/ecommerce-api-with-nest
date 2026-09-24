@@ -48,6 +48,32 @@ export class UserService {
     return this.userRepository.nativeUpdate({ id }, { refreshToken });
   }
 
+  setPasswordResetToken(id: number, tokenHash: string, expiresAt: Date) {
+    return this.userRepository.nativeUpdate(
+      { id },
+      { passwordResetTokenHash: tokenHash, passwordResetExpiresAt: expiresAt },
+    );
+  }
+
+  findByPasswordResetTokenHash(tokenHash: string) {
+    return this.userRepository.findOne(
+      { passwordResetTokenHash: tokenHash },
+      { fields: ['id', 'passwordResetTokenHash', 'passwordResetExpiresAt'] },
+    );
+  }
+
+  async resetPassword(id: number, hashedPassword: string) {
+    await this.userRepository.nativeUpdate(
+      { id },
+      {
+        password: hashedPassword,
+        passwordResetTokenHash: null,
+        passwordResetExpiresAt: null,
+        refreshToken: null,
+      },
+    );
+  }
+
   update(id: number, updateUserDto: UpdateUserDto) {
     return this.userRepository.nativeUpdate({ id }, updateUserDto);  
   }
