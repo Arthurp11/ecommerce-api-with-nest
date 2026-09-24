@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@mikro-orm/nestjs';
-import { EntityRepository } from '@mikro-orm/knex';
+import { EntityRepository } from '@mikro-orm/postgresql';
 import { User } from './entities/user.entity';
 
 @Injectable()
@@ -33,14 +33,14 @@ export class UserService {
   findMinimalForJwt(email: string) {
     return this.userRepository.findOne(
       { email },
-      { fields: ['email', 'password'] },
+      { fields: ['email', 'password', 'role'] },
     );
   }
 
   findForRefreshToken(id: number) {
     return this.userRepository.findOne(
       { id },
-      { fields: ['id', 'email', 'refreshToken'] },
+      { fields: ['id', 'email', 'role', 'refreshToken'] },
     );
   }
 
@@ -74,11 +74,12 @@ export class UserService {
     );
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return this.userRepository.nativeUpdate({ id }, updateUserDto);  
+  async update(id: number, data: UpdateUserDto & { refreshToken?: string | null }) {
+    await this.userRepository.nativeUpdate({ id }, data);
+    return this.userRepository.findOne({ id }, { refresh: true });
   }
 
-  remove(id: number) {
-    return this.userRepository.nativeDelete({ id });
+  async remove(id: number) {
+    await this.userRepository.nativeDelete({ id });
   }
 }

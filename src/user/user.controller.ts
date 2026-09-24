@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ForbiddenException, ParseIntPipe, HttpCode, HttpStatus } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserUseCase } from './usecases/create-user.usecase';
 import { UpdateUserUseCase } from './usecases/update-user.usecase';
@@ -26,35 +26,30 @@ export class UserController {
 
   @Get(':id')
   findOne(
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user: AuthenticatedUserDto,
   ) {
-    if (user.userId !== +id) {
+    if (user.userId !== id) {
       throw new ForbiddenException('You can only view your own account');
     }
-    return this.userService.findOne(+id);
+    return this.userService.findOne(id);
   }
 
   @Patch(':id')
   update(
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() updateUserDto: UpdateUserDto,
     @CurrentUser() user: AuthenticatedUserDto,
   ) {
-    if (user.userId !== +id) {
-      throw new ForbiddenException('You can only update your own account');
-    }
-    return this.updateUserUseCase.execute(+id, updateUserDto, user);
+    return this.updateUserUseCase.execute(id, updateUserDto, user);
   }
 
   @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
   remove(
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user: AuthenticatedUserDto,
   ) {
-    if (user.userId !== +id) {
-      throw new ForbiddenException('You can only delete your own account');
-    }
-    return this.deleteUserUseCase.execute(+id, user);
+    return this.deleteUserUseCase.execute(id, user);
   }
 }

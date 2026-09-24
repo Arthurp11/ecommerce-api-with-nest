@@ -7,6 +7,7 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { UserModule } from "src/user/user.module";
 import { MailModule } from "src/mail/mail.module";
 import { AuthTokenGuard } from "./guards/auth-token.guard";
+import { RolesGuard } from "./guards/roles.guard";
 
 @Global()
 @Module({
@@ -29,6 +30,10 @@ import { AuthTokenGuard } from "./guards/auth-token.guard";
         {
             provide: APP_GUARD,
             useClass: AuthTokenGuard,
+        },
+        {
+            provide: APP_GUARD,
+            useClass: RolesGuard,
         },
     ],
     exports: [JwtModule],

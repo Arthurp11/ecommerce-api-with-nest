@@ -21,10 +21,8 @@ export class DeleteUserUseCase {
       throw new ForbiddenException(`You can only delete your own account`);
     }
 
-    const userRemoved = await this.userService.remove(id);
+    await this.userService.remove(id);
 
     this.logger.log(`User with ID ${id} deleted successfully`);
-
-    return userRemoved;
   }
 }

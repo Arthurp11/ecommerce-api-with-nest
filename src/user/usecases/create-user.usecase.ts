@@ -1,9 +1,9 @@
 import { ConflictException, Injectable, Logger } from '@nestjs/common';
+import { UniqueConstraintViolationException } from '@mikro-orm/core';
 import * as bcrypt from 'bcrypt';
 import { UserService } from '../user.service';
 import { CreateUserDto } from '../dto/create-user.dto';
-
-const SALT_ROUNDS = 10;
+import { SALT_ROUNDS } from 'src/common/constants';
 
 @Injectable()
 export class CreateUserUseCase {
@@ -22,13 +22,20 @@ export class CreateUserUseCase {
 
     const hashedPassword = await bcrypt.hash(createUserDto.password, SALT_ROUNDS);
 
-    const userCreated = await this.userService.create({
-      ...createUserDto,
-      password: hashedPassword,
-    }); 
+    try {
+      const userCreated = await this.userService.create({
+        ...createUserDto,
+        password: hashedPassword,
+      });
 
-    this.logger.log(`User with email ${createUserDto.email} created successfully`);
-    
-    return userCreated;
+      this.logger.log(`User with email ${createUserDto.email} created successfully`);
+
+      return userCreated;
+    } catch (error) {
+      if (error instanceof UniqueConstraintViolationException) {
+        throw new ConflictException(`User with email ${createUserDto.email} already exists`);
+      }
+      throw error;
+    }
   }
 }

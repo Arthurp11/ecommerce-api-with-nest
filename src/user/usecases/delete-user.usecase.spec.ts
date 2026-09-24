@@ -2,12 +2,17 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { DeleteUserUseCase } from './delete-user.usecase';
 import { UserService } from '../user.service';
 import { AuthenticatedUserDto } from 'src/auth/dto/authenticated-user.dto';
+import { UserRole } from 'src/user/enums/user-role.enum';
 
 describe('DeleteUserUseCase', () => {
   let useCase: DeleteUserUseCase;
   let userService: jest.Mocked<UserService>;
 
-  const currentUser: AuthenticatedUserDto = { userId: 1, email: 'jane@doe.com' };
+  const currentUser: AuthenticatedUserDto = {
+    userId: 1,
+    email: 'jane@doe.com',
+    role: UserRole.CUSTOMER,
+  };
 
   beforeEach(() => {
     userService = {

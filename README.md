@@ -1,6 +1,6 @@
-# Nest Boilerplate — Auth + User
+# Ecommerce API — Auth, User e Catálogo
 
-Boilerplate [NestJS](https://nestjs.com/) com autenticação JWT (access + refresh token) e CRUD de usuário já implementados, usando [MikroORM](https://mikro-orm.io/) + PostgreSQL.
+API de e-commerce em [NestJS](https://nestjs.com/) com autenticação JWT (access + refresh token), usuários com papéis (`customer`/`admin`) e catálogo de categorias e produtos, usando [MikroORM](https://mikro-orm.io/) + PostgreSQL.
 
 ## Stack
 
@@ -96,15 +96,53 @@ Todas as rotas exigem `Authorization: Bearer <accessToken>`, exceto as marcadas 
 | POST | `/user` | Sim | Cria um usuário (registro) |
 | GET | `/user/:id` | Não | Retorna os dados do próprio usuário autenticado (só é possível acessar o próprio `id`) |
 | PATCH | `/user/:id` | Não | Atualiza o próprio usuário |
-| DELETE | `/user/:id` | Não | Remove o próprio usuário |
+| DELETE | `/user/:id` | Não | Remove o próprio usuário (retorna `204`) |
 
-Não existe listagem de todos os usuários nem acesso a dados de terceiros — cada usuário só enxerga a si mesmo. Se for necessário um papel de administrador no futuro, isso deve ser modelado explicitamente (ex: campo `role` + guard de autorização), e não reaberto como uma rota irrestrita.
+Não existe listagem de todos os usuários nem acesso a dados de terceiros — cada usuário só enxerga a si mesmo. Trocar a senha pelo `PATCH` encerra as outras sessões (limpa o refresh token).
+
+### Papéis (roles)
+
+Todo usuário tem um `role`: `customer` (padrão) ou `admin`. O `role` vai no payload do access token e é checado pelo `RolesGuard` nas rotas marcadas com `@Roles(UserRole.ADMIN)`. Não é possível virar admin pela API; promova o primeiro admin direto no banco e faça login de novo para receber um token com o novo papel:
+
+```sql
+UPDATE "user" SET role = 'admin' WHERE email = 'voce@exemplo.com';
+```
+
+### Categorias (`/categories`)
+
+| Método | Rota | Acesso | Descrição |
+| --- | --- | --- | --- |
+| GET | `/categories` | Público | Lista as categorias em ordem alfabética |
+| GET | `/categories/:slug` | Público | Retorna uma categoria pelo slug |
+| POST | `/categories` | Admin | Cria uma categoria (`name` único; slug gerado a partir do nome) |
+| PATCH | `/categories/:id` | Admin | Atualiza nome/descrição (o slug não muda) |
+| DELETE | `/categories/:id` | Admin | Remove a categoria; retorna `409` se ainda houver produtos nela |
+
+### Produtos (`/products`)
+
+| Método | Rota | Acesso | Descrição |
+| --- | --- | --- | --- |
+| GET | `/products` | Público | Lista produtos ativos, paginado |
+| GET | `/products/:slug` | Público | Retorna um produto ativo pelo slug |
+| POST | `/products` | Admin | Cria um produto |
+| PATCH | `/products/:id` | Admin | Atualiza um produto (inclusive `isActive` e `categoryId`) |
+| DELETE | `/products/:id` | Admin | Soft delete: marca `isActive = false` e o produto some da vitrine |
+
+Filtros do `GET /products`: `search` (nome, sem diferenciar maiúsculas), `categoryId`, `minPrice`, `maxPrice`, `sort` (`newest` padrão, `price_asc`, `price_desc`), `page` (padrão 1) e `limit` (padrão 20, máx. 100). Resposta:
+
+```json
+{ "data": [...], "meta": { "total": 42, "page": 1, "limit": 20, "totalPages": 3 } }
+```
+
+Preços são inteiros em centavos (`priceInCents: 29990` = R$ 299,90). `sku` é único (`409` se repetido); nomes podem se repetir e o slug recebe sufixo (`tenis-runner-2`). `images` é uma lista de URLs.
 
 ## Segurança
 
 - Guard de autenticação global (`AuthTokenGuard`), com opt-out explícito via `@IsPublic()`
 - Senhas com hash `bcrypt`, nunca retornadas nas respostas (`hidden: true` na entity)
-- Refresh token armazenado com hash, nunca em texto puro
+- Refresh token armazenado como hash SHA-256 (com `jti` único por token), nunca em texto puro; um refresh token já rotacionado é recusado
+- Variáveis de ambiente validadas no boot (`src/config/env.validation.ts`); `JWT_REFRESH_SECRET` precisa ser diferente de `JWT_SECRET`
+- E-mails normalizados (trim + minúsculas) no cadastro, login e recuperação de senha
 - Helmet + CORS configurados em `main.ts`
 - Rate limiting global (`@nestjs/throttler`) e mais restrito em `login`/`refresh`
 - Exception filter global (`AllExceptionsFilter`) padroniza o payload de erro (`statusCode`, `timestamp`, `path`, `method`, `message`) e loga erros 5xx como `error`/4xx como `warn`
@@ -116,8 +154,9 @@ O workflow `.github/workflows/ci.yml` roda em push/PR para `main`: lint, testes 
 
 ## O que ainda falta para produção
 
-Este boilerplate cobre auth + user + recuperação de senha, mas antes de usar em produção considere:
+Este projeto cobre auth + user + catálogo, mas antes de usar em produção considere:
 
 - Trocar `MailService` por um provedor de e-mail de verdade (hoje só loga no console)
 - Verificação de e-mail no cadastro (`emailVerified`), se necessário para o seu caso de uso
+- Próximas fases do e-commerce: carrinho, checkout/pedidos (com baixa de estoque em transação), pagamento (começando por um provider mock) e endereços/avaliações/cupons
 - Configurar branch protection no GitHub para o CI realmente bloquear merge quando falhar

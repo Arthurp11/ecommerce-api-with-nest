@@ -1,3 +1,4 @@
+import { NormalizeEmail } from 'src/common/transformers/normalize-email.transformer';
 import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
 
 export class CreateUserDto {
@@ -5,6 +6,8 @@ export class CreateUserDto {
     @IsNotEmpty()
     @MinLength(2)
     name: string;
+
+    @NormalizeEmail()
 
     @IsEmail()
     @IsNotEmpty()

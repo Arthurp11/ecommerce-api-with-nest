@@ -1,4 +1,5 @@
 import { ConflictException } from '@nestjs/common';
+import { UniqueConstraintViolationException } from '@mikro-orm/core';
 import * as bcrypt from 'bcrypt';
 import { CreateUserUseCase } from './create-user.usecase';
 import { UserService } from '../user.service';
@@ -35,5 +36,16 @@ describe('CreateUserUseCase', () => {
     const [createArg] = userService.create.mock.calls[0];
     expect(createArg.password).not.toBe('password123');
     expect(await bcrypt.compare('password123', createArg.password)).toBe(true);
+  });
+
+  it('throws ConflictException when a concurrent sign-up wins the unique constraint', async () => {
+    userService.findWithEmail.mockResolvedValue(null);
+    userService.create.mockRejectedValue(
+      new UniqueConstraintViolationException(new Error('duplicate key')),
+    );
+
+    await expect(
+      useCase.execute({ name: 'Jane', email: 'jane@doe.com', password: 'password123' }),
+    ).rejects.toBeInstanceOf(ConflictException);
   });
 });

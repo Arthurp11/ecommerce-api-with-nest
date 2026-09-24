@@ -1,10 +1,14 @@
 import { UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { AuthService } from './auth.service';
 import { UserService } from 'src/user/user.service';
 import { MailService } from 'src/mail/mail.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { UserRole } from 'src/user/enums/user-role.enum';
+
+const sha256 = (value: string) => crypto.createHash('sha256').update(value).digest('hex');
 
 describe('AuthService', () => {
   let authService: AuthService;
@@ -72,6 +76,7 @@ describe('AuthService', () => {
         id: 1,
         email: 'jane@doe.com',
         password: hashedPassword,
+        role: UserRole.CUSTOMER,
       } as any);
       jwtService.sign.mockReturnValueOnce('access-token').mockReturnValueOnce('refresh-token');
 
@@ -82,10 +87,31 @@ describe('AuthService', () => {
 
       expect(result.accessToken).toBe('access-token');
       expect(result.refreshToken).toBe('refresh-token');
-      expect(userService.updateRefreshToken).toHaveBeenCalledWith(1, expect.any(String));
+      expect(userService.updateRefreshToken).toHaveBeenCalledWith(1, sha256('refresh-token'));
+      expect(jwtService.sign).toHaveBeenNthCalledWith(1, {
+        userId: 1,
+        email: 'jane@doe.com',
+        role: UserRole.CUSTOMER,
+      });
+    });
 
-      const [, storedHash] = userService.updateRefreshToken.mock.calls[0];
-      expect(await bcrypt.compare('refresh-token', storedHash as string)).toBe(true);
+    it('puts a unique jti in every refresh token', async () => {
+      const hashedPassword = await bcrypt.hash('correct-password', 10);
+      userService.findMinimalForJwt.mockResolvedValue({
+        id: 1,
+        email: 'jane@doe.com',
+        password: hashedPassword,
+        role: UserRole.CUSTOMER,
+      } as any);
+      jwtService.sign.mockReturnValue('token');
+
+      await authService.login({ email: 'jane@doe.com', password: 'correct-password' });
+      await authService.login({ email: 'jane@doe.com', password: 'correct-password' });
+
+      const firstJti = (jwtService.sign.mock.calls[1][0] as any).jti;
+      const secondJti = (jwtService.sign.mock.calls[3][0] as any).jti;
+      expect(firstJti).toEqual(expect.any(String));
+      expect(firstJti).not.toBe(secondJti);
     });
   });
 
@@ -110,7 +136,7 @@ describe('AuthService', () => {
     });
 
     it('throws UnauthorizedException when the token does not match the stored hash', async () => {
-      const storedHash = await bcrypt.hash('a-different-refresh-token', 10);
+      const storedHash = sha256('a-different-refresh-token');
       jwtService.verify.mockReturnValue({ userId: 1, email: 'jane@doe.com' });
       userService.findForRefreshToken.mockResolvedValue({
         id: 1,
@@ -123,7 +149,7 @@ describe('AuthService', () => {
     });
 
     it('issues a new token pair when the refresh token is valid', async () => {
-      const storedHash = await bcrypt.hash('valid-refresh-token', 10);
+      const storedHash = sha256('valid-refresh-token');
       jwtService.verify.mockReturnValue({ userId: 1, email: 'jane@doe.com' });
       userService.findForRefreshToken.mockResolvedValue({
         id: 1,
@@ -138,6 +164,21 @@ describe('AuthService', () => {
 
       expect(result.accessToken).toBe('new-access-token');
       expect(result.refreshToken).toBe('new-refresh-token');
+      expect(userService.updateRefreshToken).toHaveBeenCalledWith(1, sha256('new-refresh-token'));
+    });
+
+    it('rejects a refresh token that was already rotated out', async () => {
+      const oldToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImp0aSI6ImFhYSJ9.old';
+      const currentToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImp0aSI6ImFhYSJ9.new';
+      jwtService.verify.mockReturnValue({ userId: 1 });
+      userService.findForRefreshToken.mockResolvedValue({
+        id: 1,
+        email: 'jane@doe.com',
+        refreshToken: sha256(currentToken),
+      } as any);
+
+      await expect(authService.refresh(oldToken)).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(userService.updateRefreshToken).not.toHaveBeenCalled();
     });
   });
 

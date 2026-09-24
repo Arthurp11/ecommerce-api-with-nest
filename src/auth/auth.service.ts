@@ -6,8 +6,9 @@ import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import { UserService } from "src/user/user.service";
 import { MailService } from "src/mail/mail.service";
+import { SALT_ROUNDS } from "src/common/constants";
+import { UserRole } from "src/user/enums/user-role.enum";
 
-const SALT_ROUNDS = 10;
 const PASSWORD_RESET_TOKEN_BYTES = 32;
 const PASSWORD_RESET_EXPIRATION_MS = 60 * 60 * 1000; // 1 hour
 
@@ -37,24 +38,7 @@ export class AuthService {
             throw new UnauthorizedException('Invalid credentials');
         }
 
-        const accessToken = this.jwtService.sign({
-            userId: user.id,
-            email: user.email
-        });
-
-        const refreshToken = this.jwtService.sign(
-            {
-                userId: user.id,
-                email: user.email
-            },
-            {
-                secret: this.configService.get('JWT_REFRESH_SECRET'),
-                expiresIn: this.configService.get('JWT_REFRESH_EXPIRES_IN')
-            }
-        );
-
-        const hashedRefreshToken = await bcrypt.hash(refreshToken, SALT_ROUNDS);
-        await this.userService.updateRefreshToken(user.id, hashedRefreshToken);
+        const { accessToken, refreshToken } = await this.issueTokens(user);
 
         this.logger.log(`User ${user.email} logged in successfully`);
 
@@ -66,7 +50,7 @@ export class AuthService {
     }
 
     async refresh(refreshToken: string) {
-        let payload: { userId: number; email: string };
+        let payload: { userId: number };
 
         try {
             payload = this.jwtService.verify(refreshToken, {
@@ -82,30 +66,11 @@ export class AuthService {
             throw new UnauthorizedException('Invalid refresh token');
         }
 
-        const isMatch = await bcrypt.compare(refreshToken, user.refreshToken);
-
-        if (!isMatch) {
+        if (!this.hashesMatch(this.hashToken(refreshToken), user.refreshToken)) {
             throw new UnauthorizedException('Invalid refresh token');
         }
 
-        const accessToken = this.jwtService.sign({
-            userId: user.id,
-            email: user.email
-        });
-
-        const newRefreshToken = this.jwtService.sign(
-            {
-                userId: user.id,
-                email: user.email
-            },
-            {
-                secret: this.configService.get('JWT_REFRESH_SECRET'),
-                expiresIn: this.configService.get('JWT_REFRESH_EXPIRES_IN')
-            }
-        );
-
-        const hashedRefreshToken = await bcrypt.hash(newRefreshToken, SALT_ROUNDS);
-        await this.userService.updateRefreshToken(user.id, hashedRefreshToken);
+        const { accessToken, refreshToken: newRefreshToken } = await this.issueTokens(user);
 
         return {
             message: 'Token refreshed successfully',
@@ -124,7 +89,7 @@ export class AuthService {
 
         if (user) {
             const resetToken = crypto.randomBytes(PASSWORD_RESET_TOKEN_BYTES).toString('hex');
-            const tokenHash = this.hashResetToken(resetToken);
+            const tokenHash = this.hashToken(resetToken);
             const expiresAt = new Date(Date.now() + PASSWORD_RESET_EXPIRATION_MS);
 
             await this.userService.setPasswordResetToken(user.id, tokenHash, expiresAt);
@@ -139,7 +104,7 @@ export class AuthService {
     }
 
     async resetPassword(token: string, newPassword: string) {
-        const tokenHash = this.hashResetToken(token);
+        const tokenHash = this.hashToken(token);
         const user = await this.userService.findByPasswordResetTokenHash(tokenHash);
 
         if (
@@ -158,7 +123,33 @@ export class AuthService {
         return { message: 'Password reset successfully' };
     }
 
-    private hashResetToken(token: string): string {
+    private async issueTokens(user: { id: number; email: string; role: UserRole }) {
+        const accessToken = this.jwtService.sign({
+            userId: user.id,
+            email: user.email,
+            role: user.role,
+        });
+
+        const refreshToken = this.jwtService.sign(
+            { userId: user.id, jti: crypto.randomUUID() },
+            {
+                secret: this.configService.get('JWT_REFRESH_SECRET'),
+                expiresIn: this.configService.get('JWT_REFRESH_EXPIRES_IN'),
+            },
+        );
+
+        await this.userService.updateRefreshToken(user.id, this.hashToken(refreshToken));
+
+        return { accessToken, refreshToken };
+    }
+
+    private hashToken(token: string): string {
         return crypto.createHash('sha256').update(token).digest('hex');
+    }
+
+    private hashesMatch(a: string, b: string): boolean {
+        const bufferA = Buffer.from(a);
+        const bufferB = Buffer.from(b);
+        return bufferA.length === bufferB.length && crypto.timingSafeEqual(bufferA, bufferB);
     }
 }
