@@ -7,6 +7,10 @@ import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { CategoryModule } from './category/category.module';
 import { ProductModule } from './product/product.module';
+import { AddressModule } from './address/address.module';
+import { CartModule } from './cart/cart.module';
+import { OrderModule } from './order/order.module';
+import { PaymentModule } from './payment/payment.module';
 import mikroOrmConfig from '../mikro-orm.config';
 import { validateEnv } from './config/env.validation';
 
@@ -16,14 +20,21 @@ import { validateEnv } from './config/env.validation';
     AuthModule,
     CategoryModule,
     ProductModule,
+    AddressModule,
+    CartModule,
+    OrderModule,
+    PaymentModule,
     MikroOrmModule.forRoot(mikroOrmConfig),
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60000,
-        limit: 20,
-      },
-    ]),
+    ThrottlerModule.forRoot({
+      throttlers: [
+        {
+          ttl: 60000,
+          limit: 20,
+        },
+      ],
+      skipIf: () => process.env.NODE_ENV === 'test',
+    }),
   ],
   providers: [
     {

@@ -8,7 +8,10 @@ import { UpdateCategoryDto } from './dto/update-category.dto';
 import { IsPublic } from 'src/auth/decorators/is-public.decorator';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { UserRole } from 'src/user/enums/user-role.enum';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('categories')
+@ApiBearerAuth()
 @Controller('categories')
 export class CategoryController {
   constructor(

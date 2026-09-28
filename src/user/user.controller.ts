@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ForbiddenException, ParseIntPipe, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ForbiddenException, NotFoundException, ParseIntPipe, HttpCode, HttpStatus } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserUseCase } from './usecases/create-user.usecase';
 import { UpdateUserUseCase } from './usecases/update-user.usecase';
@@ -8,7 +8,10 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { IsPublic } from 'src/auth/decorators/is-public.decorator';
 import { AuthenticatedUserDto } from 'src/auth/dto/authenticated-user.dto';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('user')
+@ApiBearerAuth()
 @Controller('user')
 export class UserController {
   constructor(
@@ -22,6 +25,17 @@ export class UserController {
   @Post()
   create(@Body() createUserDto: CreateUserDto) {
     return this.createUserUseCase.execute(createUserDto);
+  }
+
+  @Get('me')
+  async me(@CurrentUser() user: AuthenticatedUserDto) {
+    const account = await this.userService.findOne(user.userId);
+
+    if (!account) {
+      throw new NotFoundException('User not found');
+    }
+
+    return account;
   }
 
   @Get(':id')

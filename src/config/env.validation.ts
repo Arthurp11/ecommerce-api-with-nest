@@ -1,5 +1,11 @@
 import { plainToInstance } from 'class-transformer';
-import { IsInt, IsNotEmpty, IsOptional, IsString, validateSync } from 'class-validator';
+import { IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, validateSync } from 'class-validator';
+
+enum NodeEnv {
+  DEVELOPMENT = 'development',
+  PRODUCTION = 'production',
+  TEST = 'test',
+}
 
 class EnvironmentVariables {
   @IsString()
@@ -32,9 +38,21 @@ class EnvironmentVariables {
   @IsNotEmpty()
   JWT_REFRESH_EXPIRES_IN: string;
 
+  @IsString()
+  @IsNotEmpty()
+  PAYMENT_WEBHOOK_SECRET: string;
+
   @IsOptional()
   @IsInt()
   PORT?: number;
+
+  @IsOptional()
+  @IsString()
+  CORS_ORIGIN?: string;
+
+  @IsOptional()
+  @IsEnum(NodeEnv)
+  NODE_ENV?: NodeEnv;
 }
 
 export function validateEnv(config: Record<string, unknown>) {

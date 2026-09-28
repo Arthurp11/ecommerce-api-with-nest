@@ -5,6 +5,12 @@ import { User } from "./src/user/entities/user.entity";
 import { BaseEntity } from "./src/common/entities/base.entity";
 import { Category } from "./src/category/entities/category.entity";
 import { Product } from "./src/product/entities/product.entity";
+import { Address } from "./src/address/entities/address.entity";
+import { Cart } from "./src/cart/entities/cart.entity";
+import { CartItem } from "./src/cart/entities/cart-item.entity";
+import { Order } from "./src/order/entities/order.entity";
+import { OrderItem } from "./src/order/entities/order-item.entity";
+import { Payment } from "./src/payment/entities/payment.entity";
 
 config();
 
@@ -14,7 +20,7 @@ const mikroOrmConfig = defineConfig({
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     dbName: process.env.DB_NAME,
-    entities: [BaseEntity, User, Category, Product],
+    entities: [BaseEntity, User, Category, Product, Address, Cart, CartItem, Order, OrderItem, Payment],
     extensions: [Migrator],
     migrations: {
         path: './dist/src/migrations',

@@ -1,4 +1,5 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { ForeignKeyConstraintViolationException } from '@mikro-orm/core';
 import { DeleteUserUseCase } from './delete-user.usecase';
 import { UserService } from '../user.service';
 import { AuthenticatedUserDto } from 'src/auth/dto/authenticated-user.dto';
@@ -44,5 +45,12 @@ describe('DeleteUserUseCase', () => {
     await useCase.execute(1, currentUser);
 
     expect(userService.remove).toHaveBeenCalledWith(1);
+  });
+
+  it('throws ConflictException when the user has orders', async () => {
+    userService.findOne.mockResolvedValue({ id: 1 } as any);
+    userService.remove.mockRejectedValue(new ForeignKeyConstraintViolationException(new Error('fk')));
+
+    await expect(useCase.execute(1, currentUser)).rejects.toBeInstanceOf(ConflictException);
   });
 });

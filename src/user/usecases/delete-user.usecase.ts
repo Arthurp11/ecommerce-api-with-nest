@@ -1,4 +1,5 @@
-import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ForeignKeyConstraintViolationException } from '@mikro-orm/core';
 import { UserService } from '../user.service';
 import { AuthenticatedUserDto } from 'src/auth/dto/authenticated-user.dto';
 
@@ -21,7 +22,14 @@ export class DeleteUserUseCase {
       throw new ForbiddenException(`You can only delete your own account`);
     }
 
-    await this.userService.remove(id);
+    try {
+      await this.userService.remove(id);
+    } catch (error) {
+      if (error instanceof ForeignKeyConstraintViolationException) {
+        throw new ConflictException('Accounts with order history cannot be deleted');
+      }
+      throw error;
+    }
 
     this.logger.log(`User with ID ${id} deleted successfully`);
   }

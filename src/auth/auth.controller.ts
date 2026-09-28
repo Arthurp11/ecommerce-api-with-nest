@@ -8,7 +8,10 @@ import { ResetPasswordDto } from "./dto/reset-password.dto";
 import { AuthenticatedUserDto } from "./dto/authenticated-user.dto";
 import { IsPublic } from "./decorators/is-public.decorator";
 import { CurrentUser } from "./decorators/current-user.decorator";
+import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 
+@ApiTags("auth")
+@ApiBearerAuth()
 @Controller('auth')
 export class AuthController {
     constructor(

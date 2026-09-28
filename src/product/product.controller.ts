@@ -9,7 +9,10 @@ import { ProductQueryDto } from './dto/product-query.dto';
 import { IsPublic } from 'src/auth/decorators/is-public.decorator';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { UserRole } from 'src/user/enums/user-role.enum';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('products')
+@ApiBearerAuth()
 @Controller('products')
 export class ProductController {
   constructor(
